@@ -94,63 +94,78 @@
       });
     });
 
-    return dimDefinitions.then(function(defs) {
-      var buckets = {
-        byHash: {}, // numeric hash -> bucket
-        byId: {}, // BUCKET_LEGS -> bucket
-        byType: {}, // DIM types ("ClassItem, Special") -> bucket
-        byCategory: {}, // Mirrors the dimCategory heirarchy
-        unknown: {
-          id: 'BUCKET_UNKNOWN',
-          description: 'Unknown items. DIM needs a manifest update.',
-          name: 'Unknown',
-          hash: -1,
-          hasTransferDestination: false,
-          capacity: Math.MAX_SAFE_INTEGER,
-          sort: 'Unknown',
-          type: 'Unknown'
-        },
-        setHasUnknown: function() {
-          this.byCategory[this.unknown.sort] = [this.unknown];
-          this.byId[this.unknown.id] = this.unknown;
-          this.byType[this.unknown.type] = this.unknown;
-        }
-      };
-      _.each(defs.InventoryBucket, function(def) {
-        if (def.enabled) {
-          var bucket = {
-            id: def.bucketIdentifier,
-            description: def.bucketDescription,
-            name: def.bucketName,
-            hash: def.hash,
-            hasTransferDestination: def.hasTransferDestination,
-            capacity: def.itemCount
-          };
-
-          bucket.type = bucketToType[bucket.id];
-          if (bucket.type) {
-            bucket.sort = typeToSort[bucket.type];
-            buckets.byType[bucket.type] = bucket;
-          } else if (vaultTypes[bucket.id]) {
-            bucket.sort = vaultTypes[bucket.id];
-            buckets[bucket.sort] = bucket;
+    function getBuckets() {
+      return dimDefinitions.getDefinitions()
+      .then(function(defs) {
+        var buckets = {
+          byHash: {}, // numeric hash -> bucket
+          byId: {}, // BUCKET_LEGS -> bucket
+          byType: {}, // DIM types ("ClassItem, Special") -> bucket
+          byCategory: {}, // Mirrors the dimCategory heirarchy
+          unknown: {
+            id: 'BUCKET_UNKNOWN',
+            description: 'Unknown items. DIM needs a manifest update.',
+            name: 'Unknown',
+            hash: -1,
+            hasTransferDestination: false,
+            capacity: Math.MAX_SAFE_INTEGER,
+            sort: 'Unknown',
+            type: 'Unknown'
+          },
+          setHasUnknown: function() {
+            this.byCategory[this.unknown.sort] = [this.unknown];
+            this.byId[this.unknown.id] = this.unknown;
+            this.byType[this.unknown.type] = this.unknown;
           }
+        };
+        _.each(defs.InventoryBucket, function(def) {
+          if (def.enabled) {
+            var bucket = {
+              id: def.bucketIdentifier,
+              description: def.bucketDescription,
+              name: def.bucketName,
+              hash: def.hash,
+              hasTransferDestination: def.hasTransferDestination,
+              capacity: def.itemCount
+            };
 
-          // Add an easy helper property like "inPostmaster"
-          bucket['in' + bucket.sort] = true;
+            bucket.type = bucketToType[bucket.id];
+            if (bucket.type) {
+              bucket.sort = typeToSort[bucket.type];
+              buckets.byType[bucket.type] = bucket;
+            } else if (vaultTypes[bucket.id]) {
+              bucket.sort = vaultTypes[bucket.id];
+              buckets[bucket.sort] = bucket;
+            }
 
-          buckets.byHash[bucket.hash] = bucket;
-          buckets.byId[bucket.id] = bucket;
+            // Add an easy helper property like "inPostmaster"
+            bucket['in' + bucket.sort] = true;
+
+            buckets.byHash[bucket.hash] = bucket;
+            buckets.byId[bucket.id] = bucket;
+          }
+        });
+
+        _.each(dimCategory, function(types, category) {
+          buckets.byCategory[category] = _.compact(types.map(function(type) {
+            return buckets.byType[type];
+          }));
+        });
+
+        return buckets;
+      });
+    }
+
+    let buckets$ = undefined;
+
+    return {
+      getBuckets: function() {
+        if (!buckets$) {
+          buckets$ = getBuckets();
         }
-      });
 
-      _.each(dimCategory, function(types, category) {
-        buckets.byCategory[category] = _.compact(types.map(function(type) {
-          return buckets.byType[type];
-        }));
-      });
-
-      return buckets;
-    });
+        return buckets$;
+      }
+    };
   }
 })();

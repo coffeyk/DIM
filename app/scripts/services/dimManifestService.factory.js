@@ -41,6 +41,7 @@
       }, 10000, true),
 
       getManifest: function() {
+        debugger;
         if (manifestPromise) {
           return manifestPromise;
         }

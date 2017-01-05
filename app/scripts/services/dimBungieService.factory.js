@@ -96,8 +96,11 @@
       } else if (errorCode === 99) {
         if (window.chrome && window.chrome.extension) {
           openBungieNetTab();
+          return $q.reject(new Error($translate.instant('BungieService.NotLoggedIn')));
+        } else {
+          $rootScope.$broadcast('dim-no-token-found');
+          return $q.reject();
         }
-        return $q.reject(new Error($translate.instant('BungieService.NotLoggedIn')));
       } else if (errorCode === 5) {
         return $q.reject(new Error($translate.instant('BungieService.Maintenance')));
       } else if (errorCode === 1618 &&
@@ -224,7 +227,9 @@
         .then($http)
         .then(handleErrors, handleErrors)
         .catch(function(e) {
-          showErrorToaster(e);
+          if (window.chrome && window.chrome.extension) {
+            showErrorToaster(e);
+          }
           return $q.reject(e);
         });
 
