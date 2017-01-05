@@ -242,7 +242,7 @@
       return filteredLoadout;
     }
 
-    dimDefinitions.then(function(defs) {
+    dimDefinitions.getDefinitions().then(function(defs) {
       angular.extend(vm, {
         active: 'titan',
         i18nClassNames: _.object(['titan', 'hunter', 'warlock'], _.pluck(_.sortBy(defs.Class, function(classDef) { return classDef.classType; }), 'className')),

@@ -138,7 +138,7 @@
         }
       },
       updateCharacterInfoFromEquip: function(characterInfo) {
-        dimDefinitions.then((defs) => this.updateCharacterInfo(defs, characterInfo));
+        dimDefinitions.getDefinitions().then((defs) => this.updateCharacterInfo(defs, characterInfo));
       },
       updateCharacterInfo: function(defs, characterInfo) {
         this.level = characterInfo.characterLevel;
@@ -298,7 +298,7 @@
     // items in the stores - to do that, call reloadStores.
     function updateCharacters() {
       return $q.all([
-        dimDefinitions,
+        dimDefinitions.getDefinitions(),
         dimBungieService.getCharacters(dimPlatformService.getActive())
       ]).then(function([defs, bungieStores]) {
         _.each(_stores, function(dStore) {
@@ -344,8 +344,8 @@
       }
 
       console.time('Load stores (Bungie API)');
-      _reloadPromise = $q.all([dimDefinitions,
-        dimBucketService,
+      _reloadPromise = $q.all([dimDefinitions.getDefinitions(),
+        dimBucketService.getBuckets(),
         loadNewItems(activePlatform),
         dimItemInfoService(activePlatform),
         dimBungieService.getStores(activePlatform)])
@@ -1474,8 +1474,8 @@
 
     function processItems(owner, items, previousItems = new Set(), newItems = new Set(), itemInfoService) {
       return $q.all([
-        dimDefinitions,
-        dimBucketService,
+        dimDefinitions.getDefinitions(),
+        dimBucketService.getBuckets(),
         dimMissingSources,
         previousItems,
         newItems,

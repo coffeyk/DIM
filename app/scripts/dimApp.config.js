@@ -153,6 +153,18 @@
         $httpProvider.interceptors.push('http-refresh-token');
       }
     }])
+    .run(function($rootScope, $state, localStorageService) {
+      $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options) {
+        if (!(window.chrome && window.chrome.extension)) {
+          if (!localStorageService.get('authorization')) {
+            if (toState.name !== 'login') {
+              $state.go('login');
+              event.preventDefault();
+            }
+          }
+        }
+      });
+    })
     .config(function($stateProvider, $urlRouterProvider) {
       $urlRouterProvider.otherwise("/inventory");
 

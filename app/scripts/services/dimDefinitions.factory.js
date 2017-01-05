@@ -20,9 +20,7 @@
     'Vendor'
   ];
 
-  const mod = angular.module('dimApp');
-
-  mod.factory('dimDefinitions', Definitions);
+  angular.module('dimApp').factory('dimDefinitions', Definitions);
 
   /**
    * Manifest database definitions. This returns a promise for an
@@ -30,40 +28,54 @@
    * above (defs.TalentGrid, etc.).
    */
   function Definitions($q, dimManifestService) {
-    return dimManifestService.getManifest()
-      .then(function(db) {
-        const defs = {};
+    function getDefinitions() {
+      return dimManifestService.getManifest()
+        .then(function(db) {
+          const defs = {};
 
-        // Load objects that lazily load their properties from the sqlite DB.
-        lazyTables.forEach(function(tableShort) {
-          const table = `Destiny${tableShort}Definition`;
-          defs[tableShort] = new Proxy({}, {
-            get: function(target, name) {
-              if (name === 'then') {
-                return undefined;
-              }
+          // Load objects that lazily load their properties from the sqlite DB.
+          lazyTables.forEach(function(tableShort) {
+            const table = `Destiny${tableShort}Definition`;
+            defs[tableShort] = new Proxy({}, {
+              get: function(target, name) {
+                if (name === 'then') {
+                  return undefined;
+                }
 
-              if (this.hasOwnProperty(name)) {
-                return this[name];
+                if (this.hasOwnProperty(name)) {
+                  return this[name];
+                }
+                const val = dimManifestService.getRecord(db, table, name);
+                this[name] = val;
+                return val;
               }
-              const val = dimManifestService.getRecord(db, table, name);
-              this[name] = val;
-              return val;
-            }
+            });
           });
-        });
 
-        // Resources that need to be fully loaded (because they're iterated over)
-        eagerTables.forEach(function(tableShort) {
-          const table = `Destiny${tableShort}Definition`;
-          defs[tableShort] = dimManifestService.getAllRecords(db, table);
-        });
+          // Resources that need to be fully loaded (because they're iterated over)
+          eagerTables.forEach(function(tableShort) {
+            const table = `Destiny${tableShort}Definition`;
+            defs[tableShort] = dimManifestService.getAllRecords(db, table);
+          });
 
-        return defs;
-      })
-      .catch(function(e) {
-        console.error(e);
-        return $q.reject(e);
-      });
+          return defs;
+        })
+        .catch(function(e) {
+          console.error(e);
+          return $q.reject(e);
+        });
+    }
+
+    let definitions$ = undefined;
+
+    return {
+      getDefinitions: function () {
+        if (!definitions$) {
+          definitions$ = getDefinitions();
+        }
+
+        return definitions$;
+      }
+    };
   }
 })(angular);

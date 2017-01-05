@@ -26,7 +26,7 @@
           self.available = xurData && xurData.enabled && xurData.saleItemCategories;
 
           if (self.available) {
-            dimDefinitions.then(function(defs) {
+            dimDefinitions.getDefinitions().then(function(defs) {
               self.itemCategories = {};
               var rawItems = [];
               xurData.saleItemCategories.forEach(function(categoryData) {
