@@ -69,6 +69,7 @@
 
         $rootScope.$on('dim-settings-loaded', function() {
           var language = dimSettingsService.language;
+
           if (chromeVersion && chromeVersion.length === 2 && parseInt(chromeVersion[1], 10) < 51) {
             dimInfoService.show('old-chrome', {
               title: $translate.instant('Help.UpgradeChrome'),
