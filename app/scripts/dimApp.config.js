@@ -88,38 +88,6 @@
             });
           }
         });
-
-        // http://www.arnaldocapo.com/blog/post/google-analytics-and-angularjs-with-ui-router/72
-        // https://developers.google.com/analytics/devguides/collection/analyticsjs/single-page-applications
-        $rootScope.$on('$stateChangeSuccess', function() {
-          // if (ga) {
-          //   ga('set', 'page', $location.path());
-            // Disable sending pageviews on state changes for now, over concerns that we'll go over our free GA limits.
-            // ga('send', 'pageview');
-          // }
-        });
-
-//        if (chrome && chrome.identity) {
-//          chrome.identity.getAuthToken(function(account) {
-//            if (!account) {
-//              dimInfoService.show('chromesync', {
-//                title: 'Profile is not syncing.',
-//                type: 'warning',
-//                body: [
-//                  '<p>Unless you sign into Google Chrome, your settings and loadouts will not be saved between all of your devices.</p>',
-//                  '<p><a href="https://www.google.com/chrome/browser/signin.html" target="_blank">Click here for more information.</a></p>'
-//                ].join(''),
-//                hide: 'Do not show this message again.',
-//                func: function() {
-//                  chrome.identity.getAuthToken({ interactive: true });
-//                }
-//              });
-//            }
-//            if (chrome.runtime.lastError) {
-//              console.warn(chrome.runtime.lastError.message, 'DIM profile will not sync with other devices.');
-//            }
-//          });
-//        }
       }
     ]);
 
