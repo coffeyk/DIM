@@ -154,7 +154,7 @@
       }
     }])
     .run(function($rootScope, $state, localStorageService) {
-      $rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options) {
+      $rootScope.$on('$stateChangeStart', function(event, toState) {
         if (!(window.chrome && window.chrome.extension)) {
           if (!localStorageService.get('authorization')) {
             if (toState.name !== 'login') {

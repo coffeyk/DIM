@@ -69,7 +69,7 @@
     let definitions$ = undefined;
 
     return {
-      getDefinitions: function () {
+      getDefinitions: function() {
         if (!definitions$) {
           definitions$ = getDefinitions();
         }
