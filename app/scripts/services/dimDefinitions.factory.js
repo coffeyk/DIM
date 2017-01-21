@@ -20,6 +20,8 @@
     'Vendor'
   ];
 
+  let cache = null;
+
   angular.module('dimApp').factory('dimDefinitions', Definitions);
 
   /**
@@ -28,8 +30,13 @@
    * above (defs.TalentGrid, etc.).
    */
   function Definitions($q, dimManifestService) {
+    return {
+      getDefinitions: getDefinitions
+    };
+
     function getDefinitions() {
-      return dimManifestService.getManifest()
+      if (!cache) {
+        cache = dimManifestService.getManifest()
         .then(function(db) {
           const defs = {};
 
@@ -64,18 +71,9 @@
           console.error(e);
           return $q.reject(e);
         });
-    }
-
-    let definitions$ = undefined;
-
-    return {
-      getDefinitions: function() {
-        if (!definitions$) {
-          definitions$ = getDefinitions();
-        }
-
-        return definitions$;
       }
-    };
+      
+      return cache
+    }
   }
 })(angular);

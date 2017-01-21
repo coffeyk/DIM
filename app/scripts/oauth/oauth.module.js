@@ -5,7 +5,7 @@
         if (!localStorage.apiKey || !localStorage.authorizationURL) {
           $state.go('developer');
         } else {
-          $state.go('login');
+          // $state.go('login');
         }
       });
     }]);

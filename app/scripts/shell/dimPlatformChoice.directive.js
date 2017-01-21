@@ -31,7 +31,9 @@
       dimPlatformService.setActive(vm.active);
     };
 
-    loadingTracker.addPromise(dimPlatformService.getPlatforms());
+    // $scope.$on('dim-get-platforms', () => {
+      loadingTracker.addPromise(dimPlatformService.getPlatforms());
+    // });
 
     $scope.$on('dim-platforms-updated', function(e, args) {
       vm.platforms = args.platforms;

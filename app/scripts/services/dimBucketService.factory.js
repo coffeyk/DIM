@@ -94,9 +94,12 @@
       });
     });
 
+    return {
+      getBuckets: getBuckets
+    };
+
     function getBuckets() {
-      return dimDefinitions.getDefinitions()
-      .then(function(defs) {
+      return dimDefinitions.getDefinitions().then(function(defs) {
         var buckets = {
           byHash: {}, // numeric hash -> bucket
           byId: {}, // BUCKET_LEGS -> bucket
@@ -155,17 +158,5 @@
         return buckets;
       });
     }
-
-    let buckets$ = undefined;
-
-    return {
-      getBuckets: function() {
-        if (!buckets$) {
-          buckets$ = getBuckets();
-        }
-
-        return buckets$;
-      }
-    };
   }
 })();

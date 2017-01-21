@@ -17,6 +17,7 @@
     });
 
     const service = {
+      isRequested: false,
       isLoaded: true,
       isError: false,
       statusText: null,
@@ -45,6 +46,7 @@
           return manifestPromise;
         }
 
+        service.isRequested = true;
         service.isLoaded = false;
 
         // Clear out the old manifest file now that we use

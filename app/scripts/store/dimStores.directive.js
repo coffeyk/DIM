@@ -74,6 +74,7 @@
     vm.stores = dimStoreService.getStores();
     vm.vault = dimStoreService.getVault();
     vm.buckets = null;
+
     dimBucketService.getBuckets().then(function(buckets) {
       vm.buckets = angular.copy(buckets);
     });

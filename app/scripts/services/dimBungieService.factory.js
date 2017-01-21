@@ -95,11 +95,7 @@
         return $q.reject(new Error($translate.instant('BungieService.Throttled')));
       } else if (errorCode === 99) {
         if (window.chrome && window.chrome.extension) {
-          openBungieNetTab();
-          return $q.reject(new Error($translate.instant('BungieService.NotLoggedIn')));
-        } else {
-          $rootScope.$broadcast('dim-no-token-found');
-          return $q.reject();
+          // openBungieNetTab();
         }
       } else if (errorCode === 5) {
         return $q.reject(new Error($translate.instant('BungieService.Maintenance')));

@@ -137,9 +137,38 @@
       $urlRouterProvider.otherwise("/inventory");
 
       $stateProvider
+        .state('root', {
+          abstract: true,
+          templateUrl: 'views/content.html'
+        })
+        .state('auth', {
+          parent: 'root',
+          abstract: true,
+          views: {
+            "": {
+              template: '<div ui-view></div>'
+            },
+            "platform": {
+              template: ''
+            }
+          }
+        })
+        .state('manfiest', {
+          abstract: true,
+          parent: 'auth',
+          template: '<div ui-view></div>'
+        })
         .state('inventory', {
+          parent: 'manfiest',
           url: "/inventory",
-          templateUrl: "views/inventory.html"
+          views: {
+            "": {
+              templateUrl: "views/inventory.html"
+            },
+            "platform@root": {
+              template: '<div dim-platform-choice class="header-right"></div>'
+            }
+          }
         })
         .state('best', {
           url: "/best",
@@ -163,6 +192,7 @@
         })
         .state('login', {
           url: "/login",
+          parent: 'root',
           templateUrl: "scripts/login/login.html"
         });
     });

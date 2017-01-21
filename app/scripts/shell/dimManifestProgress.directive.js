@@ -7,7 +7,7 @@
   angular.module('dimApp')
     .component('dimManifestProgress', {
       template: [
-        '<div class="manifest-progress" ng-if="!$ctrl.manifest.isLoaded || $ctrl.manifest.isError">',
+        '<div class="manifest-progress" ng-if="($ctrl.manifest.isRequested && !$ctrl.manifest.isLoaded) || $ctrl.manifest.isError">',
         '  <i ng-if="!$ctrl.manifest.isError" class="fa fa-spin fa-refresh"></i>',
         '  <div>{{$ctrl.manifest.statusText}}</div>',
         '</div>'

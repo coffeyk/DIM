@@ -1,5 +1,5 @@
 (function() {
-  function ReturnController($http) {
+  function ReturnController($http, localStorageService) {
     var ctrl = this;
 
     ctrl.code = "";
@@ -43,7 +43,7 @@
   }
 
   angular.module('dimLogin').component('dimReturn', {
-    controller: ['$http', '$q', ReturnController],
+    controller: ['$http', 'localStorageService', ReturnController],
     templateUrl: '/scripts/login/return.component.html'
   });
 })();

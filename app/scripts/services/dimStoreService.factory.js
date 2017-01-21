@@ -344,6 +344,7 @@
       }
 
       console.time('Load stores (Bungie API)');
+
       _reloadPromise = $q.all([dimDefinitions.getDefinitions(),
         dimBucketService.getBuckets(),
         loadNewItems(activePlatform),
@@ -603,6 +604,7 @@
           if (_reloadPromise.activePlatform === activePlatform) {
             _reloadPromise = null;
           }
+          dimManifestService.isRequested = false;
           dimManifestService.isLoaded = true;
         });
 
