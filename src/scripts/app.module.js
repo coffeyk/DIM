@@ -3,6 +3,7 @@ import ngReduxModule from 'ng-redux';
 import dimAppModule from './dimApp.module';
 import shellModule from './shell/shell.module';
 import storeModule from './store/store.module';
+import welcomeModule from './welcome/welcome.module';
 
 import config from './app.config';
 import appComponent from './app.component';
@@ -12,7 +13,8 @@ const appModule = angular
     dimAppModule,
     shellModule,
     ngReduxModule,
-    storeModule
+    storeModule,
+    welcomeModule
   ])
   .config(config)
   .component('app', appComponent)
