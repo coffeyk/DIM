@@ -4,6 +4,7 @@ import dimAppModule from './dimApp.module';
 import shellModule from './shell/shell.module';
 import storeModule from './store/store.module';
 import welcomeModule from './welcome/welcome.module';
+import bungieAuthModule from './bungie-auth/bungie-auth.module';
 
 import config from './app.config';
 import appComponent from './app.component';
@@ -14,7 +15,8 @@ const appModule = angular
     shellModule,
     ngReduxModule,
     storeModule,
-    welcomeModule
+    welcomeModule,
+    bungieAuthModule
   ])
   .config(config)
   .component('app', appComponent)
