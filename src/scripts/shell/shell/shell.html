@@ -2,15 +2,7 @@
   <div id="header">
     <div class="content">
       <span class="header-right">
-        <dim-platform-choice platforms="$ctrl.platforms" current="$ctrl.selected" selected="$ctrl.platformChange(platform)" class="header-right"></dim-platform-choice>
-        <div class="header-right" id="actions">
-          <span class="link" ng-click="app.refresh($event)" translate-attr="{ title: 'Header.Refresh'}"><i ng-class="{'fa-spin': app.loadingTracker.active()}" class="fa fa-refresh"></i></span>
-          <span class="link" ng-click="app.toggleMinMax($event)" translate-attr="{ title: 'LB'}"><i class="fa fa-bar-chart"></i></span>
-          <span class="link" ng-if="app.featureFlags.materialsExchangeEnabled" ui-sref="materials-exchange" translate-attr="{ title: 'Header.MaterialsExchange' }"><i class="fa fa-list-alt"></i></span>
-          <span class="link" ng-click="app.showSetting($event)" translate-attr="{ title: 'Settings'}"><i class="fa fa-cog"></i></span>
-          <span class="link" ng-click="app.showFilters($event)" translate-attr="{ title: 'Header.Filters'}"><i class="fa fa-filter"></i></span>
-          <span class="link" title="Search"><span focus-on="clicked" dim-search-filter=""></span></span>
-        </div>
+        <ui-view name="header-right"></ui-view>
       </span>
       <span class="logo link" ui-sref="inventory" title="v{{$DIM_VERSION}} ({{$DIM_FLAVOR}})">DIM</span>
       <span class="link" ng-click="app.showAbout($event)" translate="Header.About"></span>

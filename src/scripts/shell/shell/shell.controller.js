@@ -11,7 +11,7 @@ class ShellController {
   $onInit() {
     this.unsubscribe = this.store.connect(this.mapStateToThis, this.actions)(this);
 
-    this.loadPlatforms();
+    // this.loadPlatforms();
   }
 
   $onDestroy() {

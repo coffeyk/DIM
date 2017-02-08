@@ -22,7 +22,12 @@ function routes($stateProvider, $urlRouterProvider) {
     name: 'inventory',
     parent: 'content',
     templateUrl: inventory,
-    url: '/inventory'
+    url: '/inventory',
+    views: {
+      'header-right@shell': {
+        component: 'inventoryHeaderRight'
+      }
+    }
   }, {
     name: 'best',
     parent: 'content',

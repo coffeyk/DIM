@@ -17,6 +17,10 @@ import 'angular-promise-tracker';
 import 'angular-timer';
 import 'angular-uuid2/dist/angular-uuid2.js';
 
+import inventoryModule from './inventory/inventory.module';
+
+import Definitions from './services/dimDefinitions.service';
+
 import config from './dimApp.config';
 import routes from './dimApp.routes';
 import run from './dimApp.run';
@@ -28,6 +32,7 @@ const dimAppModule = angular
     ariaModule,
     dialogModule,
     dragAndDropModule,
+    inventoryModule,
     localStorageModule,
     messagesModule,
     momentModule,
@@ -48,6 +53,7 @@ const dimAppModule = angular
   .run(run)
   .value('dimFeatureFlags', featureFlags)
   .factory('loadingTracker', loadingTracker)
+  .service('dimDefinitions', Definitions)
   .name;
 
 export default dimAppModule;

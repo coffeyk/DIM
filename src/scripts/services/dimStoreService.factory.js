@@ -144,7 +144,7 @@ function StoreService(
       }
     },
     updateCharacterInfoFromEquip: function(characterInfo) {
-      dimDefinitions.then((defs) => this.updateCharacterInfo(defs, characterInfo));
+      dimDefinitions.getDefinitions().then((defs) => this.updateCharacterInfo(defs, characterInfo));
     },
     updateCharacterInfo: function(defs, characterInfo) {
       this.level = characterInfo.characterLevel;
@@ -309,7 +309,7 @@ function StoreService(
     var self = this;
 
     return $q.all([
-      dimDefinitions,
+      dimDefinitions.getDefinitions(),
       dimBungieService.getCharacters(self.selectedPlatfrom)
     ]).then(function([defs, bungieStores]) {
       _.each(_stores, function(dStore) {
@@ -357,8 +357,8 @@ function StoreService(
     }
 
     _reloadPromise = $q.all([
-      dimDefinitions,
-      dimBucketService,
+      dimDefinitions.getDefinitions(),
+      dimBucketService.getBuckets(),
       loadNewItems(activePlatform),
       dimItemInfoService(activePlatform),
       dimBungieService.getStores(activePlatform)
@@ -1495,29 +1495,29 @@ function StoreService(
 
   function processItems(owner, items, previousItems = new Set(), newItems = new Set(), itemInfoService) {
     return $q.all([
-        dimDefinitions,
-        dimBucketService,
-        previousItems,
-        newItems,
-        itemInfoService
-      ])
-      .then(function(args) {
-        var result = [];
-        dimManifestService.statusText = $translate.instant('Manifest.LoadCharInv') + '...';
-        _.each(items, function(item) {
-          var createdItem = null;
-          try {
-            createdItem = processSingleItem(...args, item, owner);
-          } catch (e) {
-            console.error("Error processing item", item, e);
-          }
-          if (createdItem !== null) {
-            createdItem.owner = owner.id;
-            result.push(createdItem);
-          }
-        });
-        return result;
+      dimDefinitions.getDefinitions(),
+      dimBucketService.getBuckets(),
+      previousItems,
+      newItems,
+      itemInfoService
+    ])
+    .then(function(args) {
+      var result = [];
+      dimManifestService.statusText = $translate.instant('Manifest.LoadCharInv') + '...';
+      _.each(items, function(item) {
+        var createdItem = null;
+        try {
+          createdItem = processSingleItem(...args, item, owner);
+        } catch (e) {
+          console.error("Error processing item", item, e);
+        }
+        if (createdItem !== null) {
+          createdItem.owner = owner.id;
+          result.push(createdItem);
+        }
       });
+      return result;
+    });
   }
 
   function getClass(type) {

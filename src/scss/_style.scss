@@ -368,7 +368,7 @@ h2, h3 {
 
 body {
   overflow-y: auto;
-  min-width: 410px;
+  // min-width: 410px;
   margin: 0 auto;
   padding-top: 40px;
   background-color: #434444;
@@ -1273,10 +1273,11 @@ g {
   user-select: none;
 }
 
-.content {
-  // This assumes 3 characters
-  min-width: calc((52px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px))) * var(--num-characters) + 39px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px)));
-  max-width: calc((52px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px))) * var(--num-characters) + 20px + (var(--vault-max-columns) * (var(--item-size) + 8px)));
+@media all and (min-width: 768px) {
+  .content {
+    min-width: calc((52px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px))) * var(--num-characters) + 39px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px)));
+    max-width: calc((52px + var(--item-size) + (var(--character-columns) * (var(--item-size) + 8px))) * var(--num-characters) + 20px + (var(--vault-max-columns) * (var(--item-size) + 8px)));
+  }
 }
 
 #header {
