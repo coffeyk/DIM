@@ -755,4 +755,3 @@ function dimMinMaxCtrl($scope, $rootScope, $state, $q, $timeout, $location, $tra
     vm.getItems();
   });
 }
-

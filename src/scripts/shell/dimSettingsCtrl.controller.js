@@ -3,7 +3,6 @@ import _ from 'underscore';
 
 angular.module('dimApp').controller('dimSettingsCtrl', SettingsController);
 
-
 function SettingsController(loadingTracker, dimSettingsService, $scope, SyncService, dimCsvService, dimStoreService, dimInfoService, dimFeatureFlags, $window, $timeout) {
   var vm = this;
 
@@ -29,6 +28,9 @@ function SettingsController(loadingTracker, dimSettingsService, $scope, SyncServ
   };
 
   vm.settings = dimSettingsService;
+
+  // Edge doesn't support these
+  vm.supportsCssVar = window.CSS && window.CSS.supports && window.CSS.supports('--fake-var', 0);
 
   vm.showSync = function() {
     return SyncService.drive();
@@ -84,4 +86,3 @@ function SettingsController(loadingTracker, dimSettingsService, $scope, SyncServ
     reader.readAsText(angular.element('#importFile')[0].files[0]);
   };
 }
-

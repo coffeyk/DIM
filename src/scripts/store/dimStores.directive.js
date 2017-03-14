@@ -87,4 +87,3 @@ function StoresCtrl(dimSettingsService, $scope, dimStoreService, dimBucketServic
     vm.vault = dimStoreService.getVault();
   });
 }
-

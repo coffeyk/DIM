@@ -4,8 +4,6 @@ import { sum, count } from '../util';
 import idbKeyval from 'idb-keyval';
 
 import * as platformReducers from '../shell/platform/platform.reducers';
-
-import storeActions from '../store/store.actions';
 import * as storeReducers from '../store/store.reducers';
 
 angular.module('dimApp')
@@ -28,7 +26,9 @@ function StoreService(
   uuid2,
   dimFeatureFlags,
   $ngRedux,
-  StoreActions
+  StoreActions,
+  $http,
+  dimSettingsService
 ) {
   'ngInject';
 
@@ -45,6 +45,42 @@ function StoreService(
   var _idTracker = {};
 
   var _removedNewItems = new Set();
+
+  // Load classified data once per load and keep it in memory until
+  // reload. Classified data always comes from
+  // beta.destinyitemmanager.com so it can be released faster than the
+  // release website, but the release website can still use the
+  // updated definitions.
+  const getClassifiedData = _.memoize(function() {
+    return idbKeyval.get('classified-data').then((data) => {
+      // Use cached data for up to 4 hours
+      if ($DIM_FLAVOR !== 'dev' &&
+          data &&
+          data.time > Date.now() - (4 * 60 * 60 * 1000)) {
+        return data;
+      }
+
+      // In dev, use a local copy of the JSON for testing
+      const url = ($DIM_FLAVOR === 'dev')
+              ? '/data/classified.json'
+              : 'https://beta.destinyitemmanager.com/data/classified.json';
+
+      return $http.get(url)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const remoteData = response.data;
+            remoteData.time = Date.now();
+            return idbKeyval.set('classified-data', remoteData).then(() => remoteData);
+          }
+
+          console.error("Couldn't load classified info from " + url);
+
+          return {
+            itemHash: {}
+          };
+        });
+    });
+  });
 
   const dimMissingSources = require('app/data/missing_sources.json');
 
@@ -334,8 +370,6 @@ function StoreService(
   // If this is called while a reload is already happening, it'll return the promise
   // for the ongoing reload rather than kicking off a new reload.
   function reloadStores() {
-    var self = this;
-
     const activePlatform = dimPlatformService.getActive();
     if (_reloadPromise && _reloadPromise.activePlatform === activePlatform) {
       return _reloadPromise;
@@ -364,7 +398,6 @@ function StoreService(
       dimBungieService.getStores(activePlatform)
     ])
       .then(function([defs, buckets, newItems, itemInfoService, rawStores]) {
-        console.timeEnd('Load stores (Bungie API)');
         if (activePlatform !== dimPlatformService.getActive()) {
           throw new Error("Active platform mismatch");
         }
@@ -510,7 +543,7 @@ function StoreService(
 
             if (store.progression) {
               store.progression.progressions.forEach(function(prog) {
-                angular.extend(prog, defs.Progression[prog.progressionHash], progressionMeta[prog.progressionHash]);
+                angular.extend(prog, defs.Progression.get(prog.progressionHash), progressionMeta[prog.progressionHash]);
                 const faction = _.find(defs.Faction, { progressionHash: prog.progressionHash });
                 if (faction) {
                   prog.faction = faction;
@@ -645,8 +678,8 @@ function StoreService(
     return index;
   }
 
-  function processSingleItem(defs, buckets, previousItems, newItems, itemInfoService, item, owner) {
-    var itemDef = defs.InventoryItem[item.itemHash];
+  function processSingleItem(defs, buckets, previousItems, newItems, itemInfoService, classifiedData, item, owner) {
+    var itemDef = defs.InventoryItem.get(item.itemHash);
     // Missing definition?
     if (!itemDef) {
       // maybe it is redacted...
@@ -659,6 +692,7 @@ function StoreService(
 
     if (!itemDef.icon && !itemDef.action) {
       itemDef.classified = true;
+      itemDef.classType = 3;
     }
 
     if (!itemDef.icon) {
@@ -673,7 +707,14 @@ function StoreService(
       console.warn('Missing Item Definition:\n\n', item, '\n\nThis item is not in the current manifest and will be added at a later time by Bungie.');
     }
 
-    if (!itemDef.itemName) {
+    if (itemDef.classified) {
+      const classifiedItemDef = buildClassifiedItem(classifiedData, itemDef.hash);
+      if (classifiedItemDef) {
+        itemDef = classifiedItemDef;
+      }
+    }
+
+    if (!itemDef || !itemDef.itemName) {
       return null;
     }
 
@@ -713,7 +754,7 @@ function StoreService(
     if (currentBucket.id.startsWith('BUCKET_VAULT')) {
       // TODO: Remove this if Bungie ever returns bucket.id for classified
       // items in the vault.
-      if (itemDef.classified) {
+      if (itemDef.classified && itemDef.itemTypeName === 'Unknown') {
         if (currentBucket.id.endsWith('WEAPONS')) {
           currentBucket = buckets.byType.Heavy;
         } else if (currentBucket.id.endsWith('ARMOR')) {
@@ -729,7 +770,7 @@ function StoreService(
     var itemType = normalBucket.type || 'Unknown';
 
     const categories = itemDef.itemCategoryHashes ? _.compact(itemDef.itemCategoryHashes.map((c) => {
-      const category = defs.ItemCategory[c];
+      const category = defs.ItemCategory.get(c);
       return category ? category.identifier : null;
     })) : [];
 
@@ -759,7 +800,7 @@ function StoreService(
       name: itemDef.itemName,
       description: itemDef.itemDescription || '', // Added description for Bounties for now JFLAY2015
       icon: itemDef.icon,
-      notransfer: (currentBucket.inPostmaster || itemDef.nonTransferrable || !itemDef.allowActions),
+      notransfer: (currentBucket.inPostmaster || itemDef.nonTransferrable || !itemDef.allowActions || itemDef.classified),
       id: item.itemInstanceId,
       equipped: item.isEquipped,
       equipment: item.isEquipment,
@@ -781,6 +822,7 @@ function StoreService(
       visible: true,
       sourceHashes: itemDef.sourceHashes,
       lockable: normalBucket.type !== 'Class' && ((currentBucket.inPostmaster && item.isEquipment) || currentBucket.inWeapons || item.lockable),
+      taggable: item.lockable && !_.contains(categories, 'CATEGORY_ENGRAM'),
       trackable: currentBucket.inProgress && (currentBucket.hash === 2197472680 || currentBucket.hash === 1801258597),
       tracked: item.state === 2,
       locked: item.locked,
@@ -797,7 +839,7 @@ function StoreService(
     }
 
     if (createdItem.primStat) {
-      createdItem.primStat.stat = defs.Stat[createdItem.primStat.statHash];
+      createdItem.primStat.stat = defs.Stat.get(createdItem.primStat.statHash);
     }
 
     // An item is new if it was previously known to be new, or if it's new since the last load (previousItems);
@@ -850,12 +892,12 @@ function StoreService(
       try {
         const recordBook = owner.advisors.recordBooks[itemDef.recordBookHash];
 
-        recordBook.records = _.map(_.values(recordBook.records), (record) => _.extend(defs.Record[record.recordHash], record));
+        recordBook.records = _.map(_.values(recordBook.records), (record) => _.extend(defs.Record.get(record.recordHash), record));
 
         createdItem.objectives = buildRecords(recordBook, defs.Objective);
 
         if (recordBook.progression) {
-          recordBook.progression = angular.extend(recordBook.progression, defs.Progression[recordBook.progression.progressionHash]);
+          recordBook.progression = angular.extend(recordBook.progression, defs.Progression.get(recordBook.progression.progressionHash));
           createdItem.progress = recordBook.progression;
           createdItem.percentComplete = createdItem.progress.currentProgress / _.reduce(createdItem.progress.steps, (memo, step) => memo + step.progressTotal, 0);
         } else {
@@ -899,8 +941,8 @@ function StoreService(
   }
 
   function buildTalentGrid(item, talentDefs, progressDefs) {
-    var talentGridDef = talentDefs[item.talentGridHash];
-    if (!item.progression || !talentGridDef || !item.nodes || !item.nodes.length || !progressDefs[item.progression.progressionHash]) {
+    var talentGridDef = talentDefs.get(item.talentGridHash);
+    if (!item.progression || !talentGridDef || !item.nodes || !item.nodes.length || !progressDefs.get(item.progression.progressionHash)) {
       return undefined;
     }
 
@@ -909,7 +951,7 @@ function StoreService(
 
     // progressSteps gives the XP needed to reach each level, with
     // the last element repeating infinitely.
-    var progressSteps = progressDefs[item.progression.progressionHash].steps;
+    var progressSteps = progressDefs.get(item.progression.progressionHash).steps;
     // Total XP to get to specified level
     function xpToReachLevel(level) {
       if (level === 0) {
@@ -926,7 +968,7 @@ function StoreService(
     var possibleNodes = talentGridDef.nodes;
 
     // var featuredPerkNames = item.perks.map(function(perk) {
-    //   var perkDef = perkDefs[perk.perkHash];
+    //   var perkDef = perkDefs.get(perk.perkHash);
     //   return perkDef ? perkDef.displayName : 'Unknown';
     // });
 
@@ -1091,13 +1133,13 @@ function StoreService(
     ];
   }
 
-  function buildRecords(recordBook, objectiveDef) {
+  function buildRecords(recordBook, objectiveDefs) {
     if (!recordBook.records || !recordBook.records.length) {
       return undefined;
     }
 
     let processRecord = (recordBook, record) => {
-      var def = objectiveDef[record.objectives[0].objectiveHash];
+      var def = objectiveDefs.get(record.objectives[0].objectiveHash);
 
       var display;
       if (record.recordValueUIStyle === '_investment_record_value_ui_style_time_in_milliseconds') {
@@ -1120,13 +1162,13 @@ function StoreService(
     return _.map(recordBook.records, processRecord);
   }
 
-  function buildObjectives(objectives, objectiveDef) {
+  function buildObjectives(objectives, objectiveDefs) {
     if (!objectives || !objectives.length) {
       return undefined;
     }
 
     return objectives.map(function(objective) {
-      var def = objectiveDef[objective.objectiveHash];
+      var def = objectiveDefs.get(objective.objectiveHash);
 
       return {
         description: '',
@@ -1178,9 +1220,7 @@ function StoreService(
         light = 335;
       }
 
-      return ((quality.min === quality.max || light === 335) ?
-        quality.min :
-        (quality.min + "%-" + quality.max)) + '%';
+      return ((quality.min === quality.max || light === 335) ? quality.min : (quality.min + "%-" + quality.max)) + '%';
     }
 
     if (!stats || !stats.length || !light || light.value < 280) {
@@ -1286,57 +1326,58 @@ function StoreService(
     switch (type.toLowerCase()) {
       case 'helmet':
       case 'helmets':
-        return light < 292 ? 15 :
-          light < 307 ? 16 :
-          light < 319 ? 17 :
-          light < 332 ? 18 :
-          19;
+        return light < 292 ? 15
+          : light < 307 ? 16
+            : light < 319 ? 17
+              : light < 332 ? 18
+                : 19;
       case 'gauntlets':
-        return light < 287 ? 13 :
-          light < 305 ? 14 :
-          light < 319 ? 15 :
-          light < 333 ? 16 :
-          17;
+        return light < 287 ? 13
+          : light < 305 ? 14
+            : light < 319 ? 15
+              : light < 333 ? 16
+                : 17;
       case 'chest':
       case 'chest armor':
-        return light < 287 ? 20 :
-          light < 300 ? 21 :
-          light < 310 ? 22 :
-          light < 319 ? 23 :
-          light < 328 ? 24 :
-          25;
+        return light < 287 ? 20
+          : light < 300 ? 21
+            : light < 310 ? 22
+              : light < 319 ? 23
+                : light < 328 ? 24
+                  : 25;
       case 'leg':
       case 'leg armor':
-        return light < 284 ? 18 :
-          light < 298 ? 19 :
-          light < 309 ? 20 :
-          light < 319 ? 21 :
-          light < 329 ? 22 :
-          23;
+        return light < 284 ? 18
+          : light < 298 ? 19
+            : light < 309 ? 20
+              : light < 319 ? 21
+                : light < 329 ? 22
+                  : 23;
       case 'classitem':
       case 'class items':
       case 'ghost':
       case 'ghosts':
-        return light < 295 ? 8 :
-          light < 319 ? 9 :
-          10;
+        return light < 295 ? 8
+          : light < 319 ? 9
+            : 10;
       case 'artifact':
       case 'artifacts':
-        return light < 287 ? 34 :
-          light < 295 ? 35 :
-          light < 302 ? 36 :
-          light < 308 ? 37 :
-          light < 314 ? 38 :
-          light < 319 ? 39 :
-          light < 325 ? 40 :
-          light < 330 ? 41 :
-          42;
+        return light < 287 ? 34
+          : light < 295 ? 35
+            : light < 302 ? 36
+              : light < 308 ? 37
+                : light < 314 ? 38
+                  : light < 319 ? 39
+                    : light < 325 ? 40
+                      : light < 330 ? 41
+                        : light < 336 ? 42
+                          : 43;
     }
     console.warn('item bonus not found', type);
     return 0;
   }
 
-  function buildStats(item, itemDef, statDef, grid, type) {
+  function buildStats(item, itemDef, statDefs, grid, type) {
     if (!item.stats || !item.stats.length || !itemDef.stats) {
       return undefined;
     }
@@ -1353,7 +1394,7 @@ function StoreService(
     }
 
     return _.sortBy(_.compact(_.map(itemDef.stats, function(stat) {
-      var def = statDef[stat.statHash];
+      var def = statDefs.get(stat.statHash);
       if (!def) {
         return undefined;
       }
@@ -1499,25 +1540,25 @@ function StoreService(
       dimBucketService.getBuckets(),
       previousItems,
       newItems,
-      itemInfoService
-    ])
-    .then(function(args) {
-      var result = [];
-      dimManifestService.statusText = $translate.instant('Manifest.LoadCharInv') + '...';
-      _.each(items, function(item) {
-        var createdItem = null;
-        try {
-          createdItem = processSingleItem(...args, item, owner);
-        } catch (e) {
-          console.error("Error processing item", item, e);
-        }
-        if (createdItem !== null) {
-          createdItem.owner = owner.id;
-          result.push(createdItem);
-        }
+      itemInfoService,
+      getClassifiedData()])
+      .then(function (args) {
+        var result = [];
+        dimManifestService.statusText = $translate.instant('Manifest.LoadCharInv') + '...';
+        _.each(items, function (item) {
+          var createdItem = null;
+          try {
+            createdItem = processSingleItem(...args, item, owner);
+          } catch (e) {
+            console.error("Error processing item", item, e);
+          }
+          if (createdItem !== null) {
+            createdItem.owner = owner.id;
+            result.push(createdItem);
+          }
+        });
+        return result;
       });
-      return result;
-    });
   }
 
   function getClass(type) {
@@ -1625,7 +1666,7 @@ function StoreService(
         return;
       }
       statHash.value = stat.value;
-      const statDef = statDefs[stat.statHash];
+      const statDef = statDefs.get(stat.statHash);
       if (statDef) {
         statHash.name = statDef.statName; // localized name
       }
@@ -1650,5 +1691,32 @@ function StoreService(
     });
     return ret;
   }
-  // code above is from https://github.com/DestinyTrialsReport
+
+  function buildClassifiedItem(classifiedData, hash) {
+    const info = classifiedData.itemHash[hash];
+    if (info) { // do we have declassification info for item?
+      const localInfo = info.i18n[dimSettingsService.language];
+      const classifiedItem = {
+        classified: true,
+        icon: info.icon,
+        itemName: localInfo.itemName,
+        itemDescription: localInfo.itemDescription,
+        itemTypeName: localInfo.itemTypeName,
+        bucketTypeHash: info.bucketHash,
+        tierType: info.tierType,
+        classType: info.classType
+      };
+      if (info.primaryBaseStatHash) {
+        classifiedItem.primaryStat = {
+          statHash: info.primaryBaseStatHash,
+          value: info.stats[info.primaryBaseStatHash].value
+        };
+      }
+      if (info.stats) {
+        classifiedItem.stats = info.stats;
+      }
+      return classifiedItem;
+    }
+    return null;
+  }
 }
