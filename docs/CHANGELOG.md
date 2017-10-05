@@ -51,6 +51,7 @@
 * Add "Random Loadout" to D2. You gotta find it though...
 
 # 4.15.0
+[create an anchor](#anchors-in-markdown)
 
 * D2 items with objectives now show them, and quests + milestones are displayed for your characters.
 * Custom loadouts return for D2.
